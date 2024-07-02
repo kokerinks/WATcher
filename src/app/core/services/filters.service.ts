@@ -6,6 +6,8 @@ import { SimpleLabel } from '../models/label.model';
 import { Milestone } from '../models/milestone.model';
 import { LoggingService } from './logging.service';
 import { MilestoneService } from './milestone.service';
+import { AssigneeService } from './assignee.service';
+import { Assignee } from '../models/assignee.model';
 
 export type Filter = {
   title: string;
@@ -17,6 +19,7 @@ export type Filter = {
   hiddenLabels: Set<string>;
   deselectedLabels: Set<string>;
   itemsPerPage: number;
+  assignees: string[];
 };
 
 @Injectable({
@@ -39,7 +42,8 @@ export class FiltersService {
     milestones: [],
     hiddenLabels: new Set<string>(),
     deselectedLabels: new Set<string>(),
-    itemsPerPage: this.itemsPerPage
+    itemsPerPage: this.itemsPerPage,
+    assignees: []
   };
 
   readonly presetViews: {
@@ -53,7 +57,8 @@ export class FiltersService {
       labels: [],
       milestones: this.getMilestonesForCurrentlyActive().map((milestone) => milestone.title),
       deselectedLabels: new Set<string>(),
-      itemsPerPage: 20
+      itemsPerPage: 20,
+      assignees: this.assigneeService.assignees.map((assignee) => assignee.login)
     }),
     contributions: () => ({
       title: '',
@@ -63,7 +68,8 @@ export class FiltersService {
       labels: [],
       milestones: this.milestoneService.milestones.map((milestone) => milestone.title),
       deselectedLabels: new Set<string>(),
-      itemsPerPage: 20
+      itemsPerPage: 20,
+      assignees: this.assigneeService.assignees.map((assignee) => assignee.login)
     }),
     custom: () => ({})
   };
@@ -77,12 +83,14 @@ export class FiltersService {
 
   // Helps in determining whether all milestones were selected from previous repo during sanitization of milestones
   private previousMilestonesLength = 0;
+  private previousAssigneesLength = 0;
 
   constructor(
     private logger: LoggingService,
     private router: Router,
     private route: ActivatedRoute,
-    private milestoneService: MilestoneService
+    private milestoneService: MilestoneService,
+    private assigneeService: AssigneeService
   ) {
     this.filter$.subscribe((filter: Filter) => {
       this.itemsPerPage = filter.itemsPerPage;
@@ -279,7 +287,6 @@ export class FiltersService {
       deselectedLabels: newDeselectedLabels
     });
   }
-
   sanitizeMilestones(allMilestones: Milestone[]) {
     const milestones = allMilestones.map((milestone) => milestone.title);
     milestones.push(Milestone.IssueWithoutMilestone.title, Milestone.PRWithoutMilestone.title);
@@ -319,5 +326,33 @@ export class FiltersService {
       return [latestClosedMilestone, Milestone.PRWithoutMilestone];
     }
     return [...this.milestoneService.milestones, Milestone.PRWithoutMilestone];
+  }
+
+  sanitizeAssignees(allAssignees: Assignee[]) {
+    const assignees = allAssignees.map((assignee) => assignee.login);
+    assignees.push(Assignee.WithoutAssignee.login);
+    const allAssigneesSet = new Set(assignees);
+
+    // All previous assignees were selected, reset to all new assignees selected
+    if (this.filter$.value.assignees.length === this.previousAssigneesLength) {
+      this.updateFiltersWithoutUpdatingPresetView({ assignees: [...allAssigneesSet] });
+      this.previousAssigneesLength = allAssigneesSet.size;
+      return;
+    }
+
+    const newAssignees: string[] = [];
+    for (const assignee of this.filter$.value.assignees) {
+      if (allAssigneesSet.has(assignee)) {
+        newAssignees.push(assignee);
+      }
+    }
+
+    // No applicable assignees, reset to all assignees selected
+    if (newAssignees.length === 0) {
+      newAssignees.push(...allAssigneesSet);
+    }
+
+    this.updateFiltersWithoutUpdatingPresetView({ assignees: newAssignees });
+    this.previousAssigneesLength = allAssigneesSet.size;
   }
 }

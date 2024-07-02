@@ -4,6 +4,7 @@ import { BehaviorSubject, Subscription } from 'rxjs';
 import { Filter, FiltersService } from '../../core/services/filters.service';
 import { GroupBy, GroupingContextService } from '../../core/services/grouping/grouping-context.service';
 import { LoggingService } from '../../core/services/logging.service';
+import { AssigneeService } from '../../core/services/assignee.service';
 import { MilestoneService } from '../../core/services/milestone.service';
 import { ViewService } from '../../core/services/view.service';
 import { FilterableComponent } from '../issue-tables/filterableTypes';
@@ -28,15 +29,18 @@ export class FilterBarComponent implements OnInit, OnDestroy {
 
   groupByEnum: typeof GroupBy = GroupBy;
 
-  /** Milestone subscription */
+  /** Milestone/Assignee subscription */
   milestoneSubscription: Subscription;
+  assigneeSubscription: Subscription;
 
   @ViewChild(LabelFilterBarComponent, { static: true }) labelFilterBar: LabelFilterBarComponent;
 
   @ViewChild('milestoneSelectorRef', { static: false }) milestoneSelectorRef: MatSelect;
+  @ViewChild('assigneeSelectorRef', { static: false }) assigneeSelectorRef: MatSelect;
 
   constructor(
     public milestoneService: MilestoneService,
+    public assigneeService: AssigneeService,
     public filtersService: FiltersService,
     private viewService: ViewService,
     public groupingContextService: GroupingContextService,
@@ -59,6 +63,7 @@ export class FilterBarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.milestoneSubscription.unsubscribe();
+    this.assigneeSubscription.unsubscribe();
     this.repoChangeSubscription.unsubscribe();
   }
 
@@ -90,6 +95,14 @@ export class FilterBarComponent implements OnInit, OnDestroy {
       (response) => {
         this.logger.debug('IssuesViewerComponent: Fetched milestones from Github');
         this.filtersService.sanitizeMilestones(this.milestoneService.milestones);
+      },
+      (err) => {},
+      () => {}
+    );
+    this.assigneeSubscription = this.assigneeService.fetchAssignees().subscribe(
+      (response) => {
+        this.logger.debug('IssuesViewerComponent: Fetched assignees from Github');
+        this.filtersService.sanitizeAssignees(this.assigneeService.assignees);
       },
       (err) => {},
       () => {}
