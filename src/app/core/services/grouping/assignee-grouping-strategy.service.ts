@@ -47,7 +47,7 @@ export class AssigneeGroupingStrategy implements GroupingStrategy {
    * hidden group list if empty.
    */
   isInHiddenList(group: Assignee): boolean {
-    return group.equals(Assignee.WithoutAssignee);
+    return !group.equals(Assignee.WithoutAssignee);
   }
 
   // private getDataAssignedToUser(issues: Issue[], user: GithubUser): Issue[] {
