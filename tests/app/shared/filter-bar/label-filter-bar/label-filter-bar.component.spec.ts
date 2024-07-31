@@ -4,7 +4,7 @@ import { MatSelectionList } from '@angular/material/list';
 import { MatMenuModule } from '@angular/material/menu';
 import { BehaviorSubject, of } from 'rxjs';
 import { SimpleLabel } from '../../../../../src/app/core/models/label.model';
-import { FiltersService } from '../../../../../src/app/core/services/filters.service';
+import { Filter, FiltersService } from '../../../../../src/app/core/services/filters.service';
 import { LabelService } from '../../../../../src/app/core/services/label.service';
 import { LoggingService } from '../../../../../src/app/core/services/logging.service';
 import { LabelFilterBarComponent } from '../../../../../src/app/shared/filter-bar/label-filter-bar/label-filter-bar.component';
@@ -50,14 +50,27 @@ describe('LabelFilterBarComponent', () => {
       labelServiceSpy.fetchLabels.and.returnValue(of([]));
       labelServiceSpy.connect.and.returnValue(labelsSubject.asObservable());
       filtersServiceSpy.sanitizeLabels.and.callThrough();
+
+      filtersServiceSpy.filter$ = new BehaviorSubject<Filter>({
+        title: '',
+        status: [],
+        type: '',
+        sort: { active: 'id', direction: 'asc' },
+        labels: [],
+        milestones: [],
+        hiddenLabels: new Set<string>(),
+        deselectedLabels: new Set<string>(),
+        itemsPerPage: 10,
+        assignees: []
+      });
     });
 
-    // it('should update allLabels with latest emmitted value after ngAfterViewInit', fakeAsync(() => {
-    //   component.ngAfterViewInit();
-    //   tick();
-    //   labelsSubject.next(SEVERITY_SIMPLE_LABELS);
-    //   expect(component.allLabels).toEqual(SEVERITY_SIMPLE_LABELS);
-    // }));
+    it('should update allLabels with latest emmitted value after ngAfterViewInit', fakeAsync(() => {
+      component.ngAfterViewInit();
+      tick();
+      labelsSubject.next(SEVERITY_SIMPLE_LABELS);
+      expect(component.allLabels).toEqual(SEVERITY_SIMPLE_LABELS);
+    }));
   });
 
   describe('hide(label)', () => {
